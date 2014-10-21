@@ -170,6 +170,8 @@ static DWORD WINAPI CaptureThread(LPVOID ThreadPointer){
 
 	//*******************************************************************8
 	int width, height;
+	double avg[10];
+	double  avg_p_a=0;
 	IplImage *grayframe, *cannyIM, *erodeIM, *cc_img;
 
 
@@ -185,7 +187,7 @@ static DWORD WINAPI CaptureThread(LPVOID ThreadPointer){
 	CvPoint* input;
 	CvPoint pos, axisMin, axisMaj; 
 
-	int i = 0;
+	int i = 0,k=0,j=0;
 
 	//object metric variables
 	double perimeter = 0, area = 0;
@@ -344,6 +346,7 @@ static DWORD WINAPI CaptureThread(LPVOID ThreadPointer){
 
 				//display details of each object
 				//printf("Location: (%3d, %3d), Perimeter: %4.1f, Area: %4.1f P/A: %4.3f\n", pos.x, pos.y, perimeter, area, perimeter/area);
+				/*
 				if(perimeter/area >=0.140 && perimeter/area <=0.155)
 					printf("Found part #10: Nylon Machine Screw (#6-32x1/2 round)\n");
 				if(perimeter/area >=0.100 && perimeter/area <=0.103)
@@ -358,6 +361,7 @@ static DWORD WINAPI CaptureThread(LPVOID ThreadPointer){
 					printf("Found part #21: Steel Washer (#10 x 11/16)\n");
 				if(perimeter/area >=0.038 && perimeter/area <=0.048)
 					printf("Found part #25: Nylon Washer (5/16x0.74)\n");
+				*/
 				//orientation = atan2( cvmGet(eigenvecs,0,1), cvmGet(eigenvecs,0,0) )*180/PI + 90;
 			
 				//prepare text to be written on image. Text will contain perimeter(P) and area(A)
@@ -370,6 +374,11 @@ static DWORD WINAPI CaptureThread(LPVOID ThreadPointer){
 				cvPutText(cc_img, text, cvPoint(pos.x + 2,pos.y+10), &font, CV_RGB(255,255,255)  );
 				sprintf(text, "A:%4.4f", perimeter/area);
 				cvPutText(cc_img, text, cvPoint(pos.x + 2,pos.y+18), &font, CV_RGB(255,255,255)  );
+				
+				if(k != 10 && area!=0){
+					avg[k]=perimeter/area;
+					k++;
+				}
 			
 
 				//release allocated memory for matrix variables
@@ -386,7 +395,28 @@ static DWORD WINAPI CaptureThread(LPVOID ThreadPointer){
 
 	  cvShowImage ( "Contours", cc_img );
 
-	  cvWaitKey(1);
+	  if( (cvWaitKey(1) & 255) == 112 ){
+
+		  if(k=0){
+			  printf("No area found!\n");
+		  }
+		  else{
+			  for(j=0;j<10;j++){
+				printf("p/a = %4.5f\n", avg[j]);
+				avg_p_a = avg_p_a + avg[j];
+			  }
+			  printf("Average P/A = %4.5f", avg_p_a/10);
+		  }
+		  if( (cvWaitKey(0) & 255) == 112 ){
+			  k=0;
+			  avg_p_a=0;
+			  for(j=0;j<10;j++){
+				avg[j]=0;
+			  }
+			  continue;
+		  }
+
+	  }
 	  cvReleaseImage(&cc_img);
 	  
 		// Track FPS
